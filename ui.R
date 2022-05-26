@@ -1,28 +1,37 @@
-#
-# This is the user-interface definition of a Shiny web application. You can
-# run the application by clicking 'Run App' above.
-#
-# Find out more about building applications with Shiny here:
-#
-#    http://shiny.rstudio.com/
-#
-
 library(shiny)
 library(shinydashboard)
-library(flexdashboard)
+library(ggplot2)
+library(dplyr)
+library(plotly)
+library(DT)
+library(magrittr)
 
-# Define UI for application that draws a histogram
 dashboardPage(
   dashboardHeader(
     title = "Amazon Bestsellers"
   ),
   dashboardSidebar(
-    sliderInput("year", "Year:", min = 2009, max = 2022, value = 2022),
-    gaugeOutput("reviewGauge"),
-    valueBoxOutput("priceValueBox")
+    sliderInput("year", "Year:",
+                min = 2009, max = 2022, value = 2022),
+    radioButtons("genre", "Genre:",
+                 c("All" = "*", "Fiction" = "^Fiction", "Non Fiction" = "^Non"))
   ),
   dashboardBody(
-    dataTableOutput("mainDataTable"),
-    plotlyOutput("priceRatingPlotly"),
+    fluidRow(
+      shinydashboard::infoBoxOutput("yearInfoBox"),
+      shinydashboard::infoBoxOutput("genreInfoBox"),
+      shinydashboard::infoBoxOutput("reviewInfoBox")
+    ),
+    fluidRow(
+      shinydashboard::valueBoxOutput("priceValueBox"),
+      shinydashboard::valueBoxOutput("ratingValueBox"),
+      shinydashboard::valueBoxOutput("reviewValueBox")
+    ),
+    fluidRow(
+      dataTableOutput("mainDataTable")
+    ),
+    fluidRow(
+      plotlyOutput("priceRatingPlotly")
+    )
   )
 )
