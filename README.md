@@ -1,4 +1,4 @@
-# AmazonBestsellers
+# Goodreads Statistics
 Data Visualization - dashboard
 
 
