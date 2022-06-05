@@ -15,17 +15,17 @@ genres_vector <- c("All" = "*",
                    "Classics" = "Classics",
                    "Classics" = "Classics",
                    "Contemporary" = "Contemporary",
-                   "Fantasy" = "Fantasy" ,
+                   "Fantasy" = "Fantasy",
                    "Fiction" = "Fiction",
                    "Historical" = "Historical",
                    "Historical Fiction" = "Historical Fiction",
                    "Literature" = "Literature",
                    "Mystery" = "Mystery",
-                   "Nonfiction" = "Nonfiction" ,
+                   "Nonfiction" = "Nonfiction",
                    "Novels" = "Novels",
                    "Paranormal" = "Paranormal",
-                   "Romance" = "Romance" ,
-                   "Science Fiction" = "Science Fiction" ,
+                   "Romance" = "Romance",
+                   "Science Fiction" = "Science Fiction",
                    "Young Adult" = "Young Adult") #tdeal with the last category later
 
 dashboardPage(
@@ -34,20 +34,17 @@ dashboardPage(
   ),
   dashboardSidebar(
     sliderInput("year", "Year:",
-                min = 1950, max = 2022, value = c( 2000,2022), ticks = FALSE),
+                min = 1950, max = 2022, value = c(2000, 2022), ticks = FALSE),
     radioButtons("genre", "Genre:",
                  genres_vector)
   ),
-  
+
   dashboardBody(
-   # mainPanel(
-      box("Related genres", 
-        plotlyOutput("pieChartPlotly", height = 400, width = 500)
-      ),
-      box("Book genres across languages", 
-        plotlyOutput("barChartPlotly", height = 400, width = 500)
-      ),
-      fluidRow(
+    fluidRow(
+      box("Related genres", plotlyOutput("pieChartPlotly", height = 400, width = 500)),
+      box("Book genres across languages", plotlyOutput("barChartPlotly", height = 400, width = 500))
+    ),
+    fluidRow(
       shinydashboard::infoBoxOutput("yearInfoBox"),
       shinydashboard::infoBoxOutput("genreInfoBox"),
       shinydashboard::infoBoxOutput("reviewInfoBox")
@@ -57,27 +54,23 @@ dashboardPage(
       shinydashboard::valueBoxOutput("ratingValueBox"),
       shinydashboard::valueBoxOutput("reviewValueBox")
     ),
-    tabBox(width=12,
-        tabPanel("Table", 
-    
-      dataTableOutput("mainDataTable")
+    fluidRow(
+      tabBox(
+        width = 12,
+        tabPanel("Table", dataTableOutput("mainDataTable")),
+        tabPanel("Plot Price-rating", plotlyOutput("priceRatingPlotly")),
+        tabPanel("Plot Reviews-rating", plotlyOutput("reviewRatingPlotly"))
+      )
     ),
-      tabPanel("Plot Price-rating", 
-        
-          plotlyOutput("priceRatingPlotly")
-        ),
-    tabPanel("Plot Reviews-rating", 
-             
-             plotlyOutput("reviewRatingPlotly")
-    )
-      ),
-    box("Average rating depending on likes", status = "primary", width = 6,
-        sliderInput("likes", "Likes", min = 1, max = 100, value = c(10,90), post  = " %"),
-        plotlyOutput("Dplotavgrating")),
-   box("Page count and rating relation", status = "primary", width = 6,
-       sliderInput("rating", "Rating", min = 0.0, max = 5.0, value = c(0.25,4.75), step = 0.1),
-      plotlyOutput("DPlotpages")
-  )
+    fluidRow(
+      box("Average rating depending on likes", status = "primary", width = 6,
+          sliderInput("likes", "Likes", min = 1, max = 100, value = c(10, 90), post = " %"),
+          plotlyOutput("Dplotavgrating")),
+      box("Page count and rating relation", status = "primary", width = 6,
+          sliderInput("rating", "Rating", min = 0.0, max = 5.0, value = c(0.25, 4.75), step = 0.1),
+          plotlyOutput("DPlotpages")
+      )
     )
   )
+)
 

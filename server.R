@@ -14,22 +14,27 @@ library(reshape2)
 library(tidyverse)
 library(dplyr)
 
-languagesOfInterest <- c("English", "German", "Russian","Chinese", "Czech", "Polish", "French", "Spanish", "Arabic", "Turkish","Japanese")
+languagesOfInterest <- c("English", "German", "Russian", "Chinese", "Czech", "Polish", "French", "Spanish", "Arabic", "Turkish", "Japanese")
 
 df <- read.csv("data/Best_Books_Ever.csv", sep = ",")
 colnames <- colnames(df)
 columns_drop <- c("characters", "bookFormat", "edition", "coverImg", "bookId", "setting", "bbeVotes", "ratingsByStars", "isbn")
 #df$genres = substr(df$genres,2,nchar(df$genres)-1)
-data <- df %>%  .[,setdiff(names(.),columns_drop)] %>% separate_rows(genres, sep = ",")
+data <- df %>%
+  .[, setdiff(names(.), columns_drop)] %>%
+  separate_rows(genres, sep = ",")
 data$genres <- trimws(data$genres, which = c("both"), whitespace = "([\\[\\]\t\r\n']| ')")
-data$Year <- format(as.Date(data$firstPublishDate, format="%m/%d/%Y"),"%Y")
-data$publishDate <- format(as.Date(data$publishDate, format="%m/%d/%Y"),"%Y")
-data<- data %>% mutate(Year = coalesce(Year,publishDate)) %>% select(., -c(publishDate, firstPublishDate, description, awards))
+data$Year <- format(as.Date(data$firstPublishDate, format = "%m/%d/%Y"), "%Y")
+data$publishDate <- format(as.Date(data$publishDate, format = "%m/%d/%Y"), "%Y")
+data <- data %>%
+  mutate(Year = coalesce(Year, publishDate)) %>%
+  select(., -c(publishDate, firstPublishDate, description, awards))
 data$genre <- data$genres
-data <- data %>% .[,setdiff(names(.),c("genres"))]
+data <- data %>% .[, setdiff(names(.), c("genres"))]
 
 
-reviews <- data %>% distinct(., title, .keep_all = TRUE) %>%
+reviews <- data %>%
+  distinct(., title, .keep_all = TRUE) %>%
   aggregate(numRatings ~ Year, ., sum)
 
 maxReviews <- reviews %>%
@@ -45,61 +50,79 @@ getReviewsForYear <- function(year) {
 }
 
 getDataByYearAndAllGenres <- function(year) {
-  out <-data %>%
+  out <- data %>%
     filter(Year >= year[1]) %>%
     filter(Year <= year[2]) %>%
-  group_by(genre) %>%
-    summarise(count = n(), totalRev = sum(numRatings)) %>% arrange(desc(count))
+    group_by(genre) %>%
+    summarise(count = n(), totalRev = sum(numRatings)) %>%
+    arrange(desc(count))
   total_sum <- sum(out$count)
-  out<- out %>% mutate( genre = ifelse(count < total_sum[1] *0.015, "Other", genre))
+  out <- out %>% mutate(genre = ifelse(count < total_sum[1] * 0.015, "Other", genre))
   out
-    
+
 }
 
 getDataByYearAndGenre <- function(year, selected_genre) {
-  if(selected_genre == "*"){
-    out <- data %>%
-      filter(Year >= year[1]) %>%
-      filter(Year <= year[2]) %>% distinct(., title, .keep_all = TRUE)
-    out$genre = ""
-    
-  }else{
+  if (selected_genre == "*") {
     out <- data %>%
       filter(Year >= year[1]) %>%
       filter(Year <= year[2]) %>%
-     filter(genre %in% selected_genre)
-}
+      distinct(., title, .keep_all = TRUE)
+    out$genre = ""
+
+  }else {
+    out <- data %>%
+      filter(Year >= year[1]) %>%
+      filter(Year <= year[2]) %>%
+      filter(genre %in% selected_genre)
+  }
   out
 }
 
 getDataByYearAndSubGenre <- function(year, selected_genre) {
-  selected_books <-getDataByYearAndGenre(year, selected_genre) %>% select(., title)
-  out <- data %>% filter(., genre != selected_genre) %>% dplyr::inner_join(., selected_books, by = "title") %>%
+  selected_books <- getDataByYearAndGenre(year, selected_genre) %>% select(., title)
+  out <- data %>%
+    filter(., genre != selected_genre) %>%
+    dplyr::inner_join(., selected_books, by = "title") %>%
     group_by(genre) %>%
-    summarise(count = n(), totalRev = sum(numRatings)) %>% arrange(desc(count))
+    summarise(count = n(), totalRev = sum(numRatings)) %>%
+    arrange(desc(count))
   total_sum <- sum(out$count)
-  out<- out %>% mutate( genre = ifelse(count < total_sum[1] *0.015, "Other", genre))
+  out <- out %>% mutate(genre = ifelse(count < total_sum[1] * 0.015, "Other", genre))
   out
 }
 
 getDataByYearAndGenres <- function(year, selected_genre) {
-  out <- data %>% filter(Year >= year[1]) %>%
-    filter(Year <= year[2]) %>% filter(genre != "") %>% filter(language %in% languagesOfInterest) %>% 
+  out <- data %>%
+    filter(Year >= year[1]) %>%
+    filter(Year <= year[2]) %>%
+    filter(genre != "") %>%
+    filter(language %in% languagesOfInterest) %>%
     group_by(language, genre) %>%
-    summarise(count = n(), totalRev = sum(numRatings)) %>% arrange(desc(language)) %>% filter(language != "")
-  total_sumsByCountries <- out %>% group_by(language) %>% summarise(countAll = sum(count)) %>% select(., language, countAll) %>% filter(., countAll > 10) %>% dplyr::inner_join(., out, by = "language")
-  out<- total_sumsByCountries %>% mutate(genre = ifelse(count <  countAll *0.02, "Other", genre)) %>%  group_by(language, genre) %>%
-    summarise(count = sum(count), countAll = mean(countAll)) %>% arrange(desc(language))
-  out$percent = out$count*100/out$countAll
+    summarise(count = n(), totalRev = sum(numRatings)) %>%
+    arrange(desc(language)) %>%
+    filter(language != "")
+  total_sumsByCountries <- out %>%
+    group_by(language) %>%
+    summarise(countAll = sum(count)) %>%
+    select(., language, countAll) %>%
+    filter(., countAll > 10) %>%
+    dplyr::inner_join(., out, by = "language")
+  out <- total_sumsByCountries %>%
+    mutate(genre = ifelse(count < countAll * 0.02, "Other", genre)) %>%
+    group_by(language, genre) %>%
+    summarise(count = sum(count), countAll = mean(countAll)) %>%
+    arrange(desc(language))
+  out$percent = out$count * 100 / out$countAll
   out
-  
+
 }
 
 shinyServer(function(input, output) {
 
   output$yearInfoBox <- renderInfoBox({
 
-    shinydashboard::infoBox("Year",paste(input$year[1], "-", input$year[2]),
+    shinydashboard::infoBox("Year", paste(input$year[1], "-", input$year[2]),
                             icon = icon("calendar", lib = "font-awesome"),
                             color = "purple")
   })
@@ -122,15 +145,16 @@ shinyServer(function(input, output) {
 
   output$priceValueBox <- shinydashboard::renderValueBox({
     s <- 0
-    displayStr <-  ""
+    displayStr <- ""
     r <- input$mainDataTable_rows_selected
     if (!is.null(r)) {
       d <- getDataByYearAndGenre(input$year, input$genre)
       tempS <- d[r,] %>% filter(., price != "")
       s <- tempS %>%
-        select(price) %>% transform(., price = as.numeric(price)) %>%
+        select(price) %>%
+        transform(., price = as.numeric(price)) %>%
         sum(.)
-      if(nrow(tempS) < nrow(d[r,])){displayStr <- ">"}
+      if (nrow(tempS) < nrow(d[r,])) { displayStr <- ">" }
     }
 
     shinydashboard::valueBox(paste(displayStr, s, "$"), "Total price",
@@ -189,102 +213,107 @@ shinyServer(function(input, output) {
     }
 
     p$price <- as.numeric(p$price)
-    p <- p %>% filter(., price != "") %>%
+    p <- p %>%
+      filter(., price != "") %>%
       ggplot(aes(price, rating, label = title, fill = Selected)) +
       geom_point() +
       #scale_y_continuous(breaks = round(seq(0, max(p$price), by = 0.5), 1)) +
       theme_minimal() +
       scale_fill_manual(values = c("blue4", "maroon3"))
-    
+
     ggplotly(p)
   })
-  
+
   output$reviewRatingPlotly <- renderPlotly({
     p <- getDataByYearAndGenre(input$year, input$genre) %>%
       mutate(Selected = FALSE)
-    
+
     for (i in input$mainDataTable_rows_selected) {
       p[i,]$Selected <- TRUE
     }
-    
-    p <- p %>% filter(., rating != "") %>% filter(., numRatings != "") %>%
+
+    p <- p %>%
+      filter(., rating != "") %>%
+      filter(., numRatings != "") %>%
       ggplot(aes(numRatings, rating, label = title, fill = Selected)) +
-      geom_point() + 
+      geom_point() +
       #scale_y_continuous(breaks = round(seq(0, max(p$price), by = 0.5), 1)) +
       theme_minimal() +
       scale_fill_manual(values = c("blue4", "maroon3"))
-    
+
     ggplotly(p)
   })
-  
+
   output$pieChartPlotly <- renderPlotly({
-    if(input$genre == "*"){
-      p<- getDataByYearAndAllGenres(input$year)
+    if (input$genre == "*") {
+      p <- getDataByYearAndAllGenres(input$year)
     }else {
       p <- getDataByYearAndSubGenre(input$year, input$genre)
     }
-    
+
     fig <- plot_ly(p, labels = ~genre, values = ~count, type = 'pie')
-    
+
     fig <- fig %>% layout(
-                          
-                          xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
-                          yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
-    
-    
+
+      xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+      yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+
+
     fig
   })
-  
+
   output$barChartPlotly <- renderPlotly({
     p <- getDataByYearAndGenres(input$year, input$genre)
-    y <- p %>% plot_ly(x = ~language, y = ~percent, type = 'bar', 
-                 name = ~genre, color = ~genre) %>% 
-      layout(yaxis = list(title = 'Count'), barmode = 'stack') %>% layout(showlegend = FALSE,  xaxis = list(title = ''), yaxis = list(title = 'Distribution in %'))
+    y <- p %>%
+      plot_ly(x = ~language, y = ~percent, type = 'bar',
+              name = ~genre, color = ~genre) %>%
+      layout(yaxis = list(title = 'Count'), barmode = 'stack') %>%
+      layout(showlegend = FALSE, xaxis = list(title = ''), yaxis = list(title = 'Distribution in %'))
     y
   })
-  
+
   output$Dplotavgrating <- renderPlotly({
     p <- getDataByYearAndGenre(input$year, input$genre) %>%
       filter(likedPercent >= input$likes[1]) %>%
-      filter(likedPercent <= input$likes[2]) 
+      filter(likedPercent <= input$likes[2])
     fit <- density(p$rating)
-    plot_ly(x = p$rating, type = "histogram", name = "Histogram" ,xbins = list(size = 0.25)) %>%
+    plot_ly(x = p$rating, type = "histogram", name = "Histogram", xbins = list(size = 0.25)) %>%
       layout(
         xaxis = list(
-          range=c(0,5)
-        ), yaxis= list(showgrid = FALSE)) %>%
-      add_trace(x = fit$x, y = fit$y, type = "scatter", mode = "lines", fill = "tozeroy", yaxis = "y2", name = "Density") %>% 
+          range = c(0, 5)
+        ), yaxis = list(showgrid = FALSE)) %>%
+      add_trace(x = fit$x, y = fit$y, type = "scatter", mode = "lines", fill = "tozeroy", yaxis = "y2", name = "Density") %>%
       layout(yaxis2 = list(overlaying = "y", side = "right"))
   })
-  
+
   output$Dplotavgrating <- renderPlotly({
     p <- getDataByYearAndGenre(input$year, input$genre) %>%
       filter(likedPercent >= input$likes[1]) %>%
-      filter(likedPercent <= input$likes[2]) 
+      filter(likedPercent <= input$likes[2])
     fit <- density(p$rating)
-    plot_ly(x = p$rating, type = "histogram", name = "Histogram" ,xbins = list(size = 0.25)) %>%
+    plot_ly(x = p$rating, type = "histogram", name = "Histogram", xbins = list(size = 0.25)) %>%
       layout(
         xaxis = list(
-          range=c(0,5), title = "average rating"
-        ), yaxis= list(showgrid = FALSE)) %>%
-      add_trace(x = fit$x, y = fit$y, type = "scatter", mode = "lines", fill = "tozeroy", yaxis = "y2", name = "Density") %>% 
+          range = c(0, 5), title = "average rating"
+        ), yaxis = list(showgrid = FALSE)) %>%
+      add_trace(x = fit$x, y = fit$y, type = "scatter", mode = "lines", fill = "tozeroy", yaxis = "y2", name = "Density") %>%
       layout(yaxis2 = list(overlaying = "y", side = "right"))
   })
-  
+
   output$DPlotpages <- renderPlotly({
     temp <- getDataByYearAndGenre(input$year, input$genre) %>%
       filter(pages != "") %>%
       filter(!is.na(pages)) %>%
       mutate(pages = as.numeric(pages))
-    p <-temp %>%
+    p <- temp %>%
       filter(rating >= input$rating[1]) %>%
       filter(rating <= input$rating[2])
-    plot_ly(x = temp$pages, type = "histogram" ,xbins = list(size = 25), opacity=0.5, name = 'all books') %>%
+    plot_ly(x = temp$pages, type = "histogram", xbins = list(size = 25), opacity = 0.5, name = 'all books') %>%
       layout(xaxis = list(
-        range=c(0,1000), title = "page count"
-      ), 
-         yaxis= list(showgrid = FALSE)) %>%
-      add_histogram(x = p$pages, opacity=1, name = 'selected') %>% 
+        range = c(0, 1000), title = "page count"
+      ),
+             yaxis = list(showgrid = FALSE)) %>%
+      add_histogram(x = p$pages, opacity = 1, name = 'selected') %>%
       layout(barmode = "overlay")
   })
 
