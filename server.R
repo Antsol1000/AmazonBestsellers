@@ -286,19 +286,7 @@ shinyServer(function(input, output) {
       layout(yaxis2 = list(overlaying = "y", side = "right"))
   })
 
-  output$Dplotavgrating <- renderPlotly({
-    p <- getDataByYearAndGenre(input$year, input$genre) %>%
-      filter(likedPercent >= input$likes[1]) %>%
-      filter(likedPercent <= input$likes[2])
-    fit <- density(p$rating)
-    plot_ly(x = p$rating, type = "histogram", name = "Histogram", xbins = list(size = 0.25)) %>%
-      layout(
-        xaxis = list(
-          range = c(0, 5), title = "average rating"
-        ), yaxis = list(showgrid = FALSE)) %>%
-      add_trace(x = fit$x, y = fit$y, type = "scatter", mode = "lines", fill = "tozeroy", yaxis = "y2", name = "Density") %>%
-      layout(yaxis2 = list(overlaying = "y", side = "right"))
-  })
+
 
   output$DPlotpages <- renderPlotly({
     temp <- getDataByYearAndGenre(input$year, input$genre) %>%

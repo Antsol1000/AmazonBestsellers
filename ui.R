@@ -60,8 +60,8 @@ dashboardPage(
       tabItem(
         tabName = "preview",
         fluidRow(
-          box("Related genres", status = "primary",plotlyOutput("pieChartPlotly", height = 400, width = 500)),
-          box("Book genres across languages", plotlyOutput("barChartPlotly", height = 400, width = 500))
+          box("Related genres", status = "primary",plotlyOutput("pieChartPlotly")),
+          box("Book genres across languages", plotlyOutput("barChartPlotly"))
         ),
         fluidRow(
           box("Average rating depending on likes", status = "primary", width = 6,
