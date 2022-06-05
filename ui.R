@@ -8,24 +8,25 @@ library(magrittr)
 library(billboarder)
 library(reshape2)
 
-genres_vector <- c("Young Adult" = "Young Adult",
-                   "Science Fiction" = "Science Fiction" ,
-                   "Romance" = "Romance" ,
-                   "Paranormal" = "Paranormal",
-                   "Novels" = "Novels",
-                   "Nonfiction" = "Nonfiction" ,
-                   "Mystery" = "Mystery",
-                   "Literature" = "Literature",
-                   "Historical Fiction" = "Historical Fiction",
-                   "Historical" = "Historical",
-                   "Fiction" = "Fiction",
-                   "Fantasy" = "Fantasy" ,
-                   "Contemporary" = "Contemporary",
-                   "Classics" = "Classics",
-                   "Childrens" = "Childrens",
-                   "Adventure" = "Adventure",
+genres_vector <- c("All" = "*",
                    "Adult" = "Adult",
-                   "All" = "*") #tdeal with the last category later
+                   "Adventure" = "Adventure",
+                   "Childrens" = "Childrens",
+                   "Classics" = "Classics",
+                   "Classics" = "Classics",
+                   "Contemporary" = "Contemporary",
+                   "Fantasy" = "Fantasy" ,
+                   "Fiction" = "Fiction",
+                   "Historical" = "Historical",
+                   "Historical Fiction" = "Historical Fiction",
+                   "Literature" = "Literature",
+                   "Mystery" = "Mystery",
+                   "Nonfiction" = "Nonfiction" ,
+                   "Novels" = "Novels",
+                   "Paranormal" = "Paranormal",
+                   "Romance" = "Romance" ,
+                   "Science Fiction" = "Science Fiction" ,
+                   "Young Adult" = "Young Adult") #tdeal with the last category later
 
 dashboardPage(
   dashboardHeader(
@@ -33,7 +34,7 @@ dashboardPage(
   ),
   dashboardSidebar(
     sliderInput("year", "Year:",
-                min = 1900, max = 2022, value = c( 2000,2022)),
+                min = 1950, max = 2022, value = c( 2000,2022), ticks = FALSE),
     radioButtons("genre", "Genre:",
                  genres_vector)
   ),
@@ -69,7 +70,14 @@ dashboardPage(
              
              plotlyOutput("reviewRatingPlotly")
     )
-      )
+      ),
+    box("Average rating depending on likes", status = "primary", width = 6,
+        sliderInput("likes", "Likes", min = 1, max = 100, value = c(10,90), post  = " %"),
+        plotlyOutput("Dplotavgrating")),
+   box("Page count and rating relation", status = "primary", width = 6,
+       sliderInput("rating", "Rating", min = 0.0, max = 5.0, value = c(0.25,4.75), step = 0.1),
+      plotlyOutput("DPlotpages")
+  )
     )
-  #)
-)
+  )
+

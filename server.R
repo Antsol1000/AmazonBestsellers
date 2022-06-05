@@ -18,7 +18,7 @@ languagesOfInterest <- c("English", "German", "Russian","Chinese", "Czech", "Pol
 
 df <- read.csv("data/Best_Books_Ever.csv", sep = ",")
 colnames <- colnames(df)
-columns_drop <- c("characters", "bookFormat", "edition", "coverImg", "bookId", "setting", "bbeScore", "bbeVotes", "ratingsByStars", "isbn")
+columns_drop <- c("characters", "bookFormat", "edition", "coverImg", "bookId", "setting", "bbeVotes", "ratingsByStars", "isbn")
 #df$genres = substr(df$genres,2,nchar(df$genres)-1)
 data <- df %>%  .[,setdiff(names(.),columns_drop)] %>% separate_rows(genres, sep = ",")
 data$genres <- trimws(data$genres, which = c("both"), whitespace = "([\\[\\]\t\r\n']| ')")
@@ -91,7 +91,6 @@ getDataByYearAndGenres <- function(year, selected_genre) {
   out<- total_sumsByCountries %>% mutate(genre = ifelse(count <  countAll *0.02, "Other", genre)) %>%  group_by(language, genre) %>%
     summarise(count = sum(count), countAll = mean(countAll)) %>% arrange(desc(language))
   out$percent = out$count*100/out$countAll
-  print(out)
   out
   
 }
@@ -123,17 +122,18 @@ shinyServer(function(input, output) {
 
   output$priceValueBox <- shinydashboard::renderValueBox({
     s <- 0
+    displayStr <-  ""
     r <- input$mainDataTable_rows_selected
-    print(r)
     if (!is.null(r)) {
       d <- getDataByYearAndGenre(input$year, input$genre)
-      s <- d[r,] %>% filter(., price != "") %>%
+      tempS <- d[r,] %>% filter(., price != "")
+      s <- tempS %>%
         select(price) %>% transform(., price = as.numeric(price)) %>%
         sum(.)
-     print(s)
+      if(nrow(tempS) < nrow(d[r,])){displayStr <- ">"}
     }
 
-    shinydashboard::valueBox(paste(s, "$"), "Total price",
+    shinydashboard::valueBox(paste(displayStr, s, "$"), "Total price",
                              icon = icon("money-bill", lib = "font-awesome"),
                              color = ifelse(s > 100, "red", "purple"))
   })
@@ -188,13 +188,14 @@ shinyServer(function(input, output) {
       p[i,]$Selected <- TRUE
     }
 
-    p <- p %>%
-      ggplot(aes(price, rating, label = title, fill = Selected, size = 1)) +
+    p$price <- as.numeric(p$price)
+    p <- p %>% filter(., price != "") %>%
+      ggplot(aes(price, rating, label = title, fill = Selected)) +
       geom_point() +
       #scale_y_continuous(breaks = round(seq(0, max(p$price), by = 0.5), 1)) +
       theme_minimal() +
       scale_fill_manual(values = c("blue4", "maroon3"))
-
+    
     ggplotly(p)
   })
   
@@ -206,9 +207,9 @@ shinyServer(function(input, output) {
       p[i,]$Selected <- TRUE
     }
     
-    p <- p %>%
+    p <- p %>% filter(., rating != "") %>% filter(., numRatings != "") %>%
       ggplot(aes(numRatings, rating, label = title, fill = Selected)) +
-      geom_point() + stat_smooth() +
+      geom_point() + 
       #scale_y_continuous(breaks = round(seq(0, max(p$price), by = 0.5), 1)) +
       theme_minimal() +
       scale_fill_manual(values = c("blue4", "maroon3"))
@@ -217,9 +218,8 @@ shinyServer(function(input, output) {
   })
   
   output$pieChartPlotly <- renderPlotly({
-    if(input$genre == "*"){ print("all genres")
+    if(input$genre == "*"){
       p<- getDataByYearAndAllGenres(input$year)
-      print(p)
     }else {
       p <- getDataByYearAndSubGenre(input$year, input$genre)
     }
@@ -229,7 +229,6 @@ shinyServer(function(input, output) {
     fig <- fig %>% layout(
                           
                           xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
-                          
                           yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
     
     
@@ -242,6 +241,51 @@ shinyServer(function(input, output) {
                  name = ~genre, color = ~genre) %>% 
       layout(yaxis = list(title = 'Count'), barmode = 'stack') %>% layout(showlegend = FALSE,  xaxis = list(title = ''), yaxis = list(title = 'Distribution in %'))
     y
+  })
+  
+  output$Dplotavgrating <- renderPlotly({
+    p <- getDataByYearAndGenre(input$year, input$genre) %>%
+      filter(likedPercent >= input$likes[1]) %>%
+      filter(likedPercent <= input$likes[2]) 
+    fit <- density(p$rating)
+    plot_ly(x = p$rating, type = "histogram", name = "Histogram" ,xbins = list(size = 0.25)) %>%
+      layout(
+        xaxis = list(
+          range=c(0,5)
+        ), yaxis= list(showgrid = FALSE)) %>%
+      add_trace(x = fit$x, y = fit$y, type = "scatter", mode = "lines", fill = "tozeroy", yaxis = "y2", name = "Density") %>% 
+      layout(yaxis2 = list(overlaying = "y", side = "right"))
+  })
+  
+  output$Dplotavgrating <- renderPlotly({
+    p <- getDataByYearAndGenre(input$year, input$genre) %>%
+      filter(likedPercent >= input$likes[1]) %>%
+      filter(likedPercent <= input$likes[2]) 
+    fit <- density(p$rating)
+    plot_ly(x = p$rating, type = "histogram", name = "Histogram" ,xbins = list(size = 0.25)) %>%
+      layout(
+        xaxis = list(
+          range=c(0,5), title = "average rating"
+        ), yaxis= list(showgrid = FALSE)) %>%
+      add_trace(x = fit$x, y = fit$y, type = "scatter", mode = "lines", fill = "tozeroy", yaxis = "y2", name = "Density") %>% 
+      layout(yaxis2 = list(overlaying = "y", side = "right"))
+  })
+  
+  output$DPlotpages <- renderPlotly({
+    temp <- getDataByYearAndGenre(input$year, input$genre) %>%
+      filter(pages != "") %>%
+      filter(!is.na(pages)) %>%
+      mutate(pages = as.numeric(pages))
+    p <-temp %>%
+      filter(rating >= input$rating[1]) %>%
+      filter(rating <= input$rating[2])
+    plot_ly(x = temp$pages, type = "histogram" ,xbins = list(size = 25), opacity=0.5, name = 'all books') %>%
+      layout(xaxis = list(
+        range=c(0,1000), title = "page count"
+      ), 
+         yaxis= list(showgrid = FALSE)) %>%
+      add_histogram(x = p$pages, opacity=1, name = 'selected') %>% 
+      layout(barmode = "overlay")
   })
 
 })
